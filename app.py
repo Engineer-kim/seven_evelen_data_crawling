@@ -6,6 +6,8 @@ import plotly.express as px
 
 st.set_page_config(page_title="이달의 편의점 행사", layout="wide")
 
+# --- Author: Kim Han Jin
+# --- Date: 2026-02-24
 
 # CSS 로드
 def load_css(file_name):
