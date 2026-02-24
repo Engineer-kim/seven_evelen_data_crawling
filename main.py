@@ -61,7 +61,6 @@ def crawl_7eleven():
         except Exception as e:
             print(f"❌ {event_label} 수집 중 오류: {e}")
 
-    # --- 데이터 저장 (중복 제거 로직 삭제됨) ---
     if all_products:
         df = pd.DataFrame(all_products)
 
@@ -70,8 +69,6 @@ def crawl_7eleven():
 
         today = datetime.now().strftime("%y%m%d")
         file_name = f"7Eleven_{today}.csv"
-
-        # 중복 제거 없이 바로 저장
         df.to_csv(file_name, index=False, encoding='utf-8-sig')
     else:
         print("❌ 수집된 데이터가 없습니다.")
