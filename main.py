@@ -38,8 +38,7 @@ def crawl_7eleven():
                 for item in items:
                     try:
                         img_tag = item.select_one(".pic_product img")
-                        name = img_tag.get('alt', '').strip() if img_tag else item.select_one(".txt_product").get_text(
-                            strip=True)
+                        name = item.select_one(".txt_product").get_text(strip=True)
 
                         price_text = item.select_one(".price_list span").get_text(strip=True).replace(',', '')
                         price = int(price_text)
