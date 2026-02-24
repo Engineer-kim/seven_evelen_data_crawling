@@ -5,13 +5,16 @@ from datetime import datetime
 
 st.set_page_config(page_title="이달의 편의점 행사", layout="wide")
 
-#css 파일 로드
+
+# CSS 로드
 def load_css(file_name):
     if os.path.exists(file_name):
         with open(file_name, encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+
 load_css("style.css")
+
 
 @st.cache_data(ttl=3600)
 def get_combined_data():
@@ -33,78 +36,143 @@ def get_combined_data():
     df[['unit_price', 'discount_rate']] = df.apply(lambda x: pd.Series(calc_info(x)), axis=1)
     return df.drop_duplicates(subset=['name', 'event', 'brand'])
 
+
 df = get_combined_data()
 
-# 사이드바 필터
-st.sidebar.header("🔍 필터 및 정렬")
-brand_list = sorted(df['brand'].unique().tolist())
-selected_brands = st.sidebar.multiselect("🏪 편의점 브랜드", brand_list, default=brand_list)
-search_query = st.sidebar.text_input("상품명 검색", "")
-event_types = sorted([e for e in df['event'].unique().tolist() if e != '세일'])
-selected_events = st.sidebar.multiselect("🏷️ 행사 종류", event_types, default=event_types)
-sort_option = st.sidebar.selectbox("💰 가격 정렬", ["기본 (랜덤)", "상품 가격 낮은 순", "상품 가격 높은 순"])
+# 1. 사이드바: 메뉴 이동용 공간 (Multi-page 메뉴)
+st.sidebar.title("📌 메뉴")
+menu = st.sidebar.radio(
+    "이동할 페이지를 선택하세요",
+    ["전체 요약", "브랜드별 비교", "가성비 분석"]
+)
 
+# 2. 메인 화면 상단: 필터 및 검색 (메인 상단으로 이동)
+st.title(f"🏪 {datetime.now().strftime('%Y년 %m월')} 편의점 행사 정보")
+
+# 필터 영역을 접고 펼칠 수 있게 하거나 컬럼으로 배치
+with st.expander("🔍 상세 필터 및 검색", expanded=True):
+    f1, f2, f3, f4 = st.columns([2, 2, 2, 1.5])
+
+    with f1:
+        brand_list = sorted(df['brand'].unique().tolist())
+        selected_brands = st.multiselect("🏪 브랜드", brand_list, default=brand_list)
+
+    with f2:
+        event_types = sorted([e for e in df['event'].unique().tolist() if e != '세일'])
+        selected_events = st.multiselect("🏷️ 행사", event_types, default=event_types)
+
+    with f3:
+        search_query = st.text_input("📝 상품명 검색", "")
+
+    with f4:
+        sort_option = st.selectbox("💰 정렬", ["기본 (랜덤)", "가격 낮은 순", "가격 높은 순"])
+
+# 데이터 필터링 로직
 filtered_df = df[(df['brand'].isin(selected_brands)) & (df['event'].isin(selected_events)) & (
     df['name'].str.contains(search_query, case=False))]
 
-if sort_option == "상품 가격 낮은 순":
+if sort_option == "가격 낮은 순":
     filtered_df = filtered_df.sort_values(by='unit_price', ascending=True)
-elif sort_option == "상품 가격 높은 순":
+elif sort_option == "가격 높은 순":
     filtered_df = filtered_df.sort_values(by='unit_price', ascending=False)
 
-# 페이지네이션
-items_per_page = 30
-total_pages = max((len(filtered_df) // items_per_page) + (1 if len(filtered_df) % items_per_page > 0 else 0), 1)
+# 3. 메뉴별 콘텐츠 출력
+if menu == "전체 요약":
+    # --- 기존 상품 리스트 출력 로직 ---
+    items_per_page = 30
+    total_pages = max((len(filtered_df) // items_per_page) + (1 if len(filtered_df) % items_per_page > 0 else 0), 1)
 
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = 1
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 1
 
-query_hash = search_query + str(selected_events) + str(selected_brands) + sort_option
-if 'last_query' not in st.session_state or st.session_state.last_query != query_hash:
-    st.session_state.current_page = 1
-    st.session_state.last_query = query_hash
+    query_hash = search_query + str(selected_events) + str(selected_brands) + sort_option
+    if 'last_query' not in st.session_state or st.session_state.last_query != query_hash:
+        st.session_state.current_page = 1
+        st.session_state.last_query = query_hash
 
-# 메인 화면
-st.title(f"🏪 {datetime.now().strftime('%Y년 %m월')} 편의점 행사 정보")
+    start_idx = (st.session_state.current_page - 1) * items_per_page
+    display_df = filtered_df.iloc[start_idx: start_idx + items_per_page]
 
-start_idx = (st.session_state.current_page - 1) * items_per_page
-display_df = filtered_df.iloc[start_idx : start_idx + items_per_page]
-
-if not display_df.empty:
-    cols = st.columns(5)
-    for idx, (_, row) in enumerate(display_df.iterrows()):
-        with cols[idx % 5]:
-            st.markdown(f"""
-                <div class="product-card">
-                    <div class="img-container"><img src="{row['img_url']}"></div>
-                    <div class="product-name">{row['name']}</div>
-                    <div style="margin-top: 8px;">
-                        <span style="font-size: 1.2rem; font-weight: 800; color: #ffffff;">{row['price']:,}원</span>
-                        <span style="font-size: 0.85rem; color: #ff6b6b; font-weight: bold; margin-left: 5px;">({row['discount_rate']}↓)</span>
+    if not display_df.empty:
+        cols = st.columns(5)
+        for idx, (_, row) in enumerate(display_df.iterrows()):
+            with cols[idx % 5]:
+                st.markdown(f"""
+                    <div class="product-card">
+                        <div class="img-container"><img src="{row['img_url']}"></div>
+                        <div class="product-name">{row['name']}</div>
+                        <div style="margin-top: 8px;">
+                            <span style="font-size: 1.2rem; font-weight: 800; color: #ffffff;">{row['price']:,}원</span>
+                            <span style="font-size: 0.85rem; color: #ff6b6b; font-weight: bold; margin-left: 5px;">({row['discount_rate']}↓)</span>
+                        </div>
+                        <div class="unit-price-text">개당 <b>{row['unit_price']:,}원</b></div>
+                        <div class="brand-text">📍 {row['brand']} | <span class="event-tag">{row['event']}</span></div>
                     </div>
-                    <div class="unit-price-text">
-                        개당 <b>{row['unit_price']:,}원</b>
-                    </div>
-                    <div class="brand-text">
-                        📍 {row['brand']} | <span class="event-tag">{row['event']}</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-    st.markdown("---")
-    _, b1, p_box, b2, _ = st.columns([4, 0.3, 1, 0.3, 4])
+        # 페이지네이션
+        st.markdown("---")
+        _, b1, p_box, b2, _ = st.columns([4, 0.3, 1, 0.3, 4])
+        with b1:
+            if st.button("❮", key="prev_btn") and st.session_state.current_page > 1:
+                st.session_state.current_page -= 1
+                st.rerun()
+        with p_box:
+            st.markdown(f"<div class='page-info-box'>{st.session_state.current_page} / {total_pages}</div>",
+                        unsafe_allow_html=True)
+        with b2:
+            if st.button("❯", key="next_btn") and st.session_state.current_page < total_pages:
+                st.session_state.current_page += 1
+                st.rerun()
+    else:
+        st.warning("결과가 없습니다.")
 
-    with b1:
-        if st.button("❮", key="prev_btn") and st.session_state.current_page > 1:
-            st.session_state.current_page -= 1
-            st.rerun()
+elif menu == "브랜드별 비교":
+    st.subheader("📊 브랜드별 행사 통계")
 
-    with p_box:
-        st.markdown(f"<div class='page-info-box'>{st.session_state.current_page} / {total_pages}</div>", unsafe_allow_html=True)
+    # 1. 브랜드별 상품 개수 집계
+    brand_counts = filtered_df['brand'].value_counts().reset_index()
+    brand_counts.columns = ['브랜드', '상품 개수']
 
-    with b2:
-        if st.button("❯", key="next_btn") and st.session_state.current_page < total_pages:
-            st.session_state.current_page += 1
-            st.rerun()
-else:
-    st.warning("결과가 없습니다.")
+    # 2. 브랜드별 행사 유형별 집계
+    event_brand_counts = filtered_df.groupby(['brand', 'event']).size().unstack(fill_value=0)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("✨ 브랜드별 총 행사 상품 수")
+        st.bar_chart(brand_counts.set_index('브랜드'))  # Streamlit 기본 차트
+
+    with col2:
+        st.write("📝 상세 통계 표")
+        st.dataframe(event_brand_counts, use_container_width=True)
+
+    # 3. 평균 가격 비교
+    st.write("💰 브랜드별 평균 개당 가격 (unit_price)")
+    avg_price = filtered_df.groupby('brand')['unit_price'].mean().reset_index()
+    st.line_chart(avg_price.set_index('brand'))
+
+elif menu == "가성비 분석":
+    st.subheader("💎 최고의 가성비 아이템 (할인율 TOP 50)")
+
+    # 할인율이 높은 순(50% > 33% > 25%)으로 정렬하고, 같은 할인율이면 가격이 낮은 순
+    best_value_df = filtered_df.sort_values(
+        by=['discount_rate', 'unit_price'],
+        ascending=[False, True]
+    ).head(50)
+
+    if not best_value_df.empty:
+        # 가성비 페이지는 리스트 형태로 간결하게 출력
+        for _, row in best_value_df.iterrows():
+            with st.container():
+                c1, c2, c3 = st.columns([1, 4, 2])
+                with c1:
+                    st.image(row['img_url'], width=80)
+                with c2:
+                    st.markdown(f"**{row['name']}**")
+                    st.caption(f"📍 {row['brand']} | {row['event']}")
+                with c3:
+                    st.markdown(f"#### {row['discount_rate']} 할인")
+                    st.write(f"개당 {row['unit_price']:,}원")
+                st.divider()
+    else:
+        st.warning("분석할 데이터가 없습니다.")
