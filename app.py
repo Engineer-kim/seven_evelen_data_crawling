@@ -5,13 +5,13 @@ from datetime import datetime
 
 st.set_page_config(page_title="이달의 편의점 행사", layout="wide")
 
-# CSS 로드
-def local_css(file_name):
+#css 파일 로드
+def load_css(file_name):
     if os.path.exists(file_name):
         with open(file_name, encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-local_css("style.css")
+load_css("style.css")
 
 @st.cache_data(ttl=3600)
 def get_combined_data():
@@ -23,19 +23,19 @@ def get_combined_data():
     df['price'] = df['price'].astype(str).str.replace(r'[^\d.]', '', regex=True)
     df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0).astype(int)
 
-    def calc(row):
+    def calc_info(row):
         e, p = row['event'], row['price']
-        if e == '1+1': return p // 2
-        if e == '2+1': return p // 3
-        if e == '3+1': return p // 4
-        return p
+        if e == '1+1': return p // 2, "50%"
+        if e == '2+1': return p // 3, "33%"
+        if e == '3+1': return p // 4, "25%"
+        return p, "0%"
 
-    df['unit_price'] = df.apply(calc, axis=1)
+    df[['unit_price', 'discount_rate']] = df.apply(lambda x: pd.Series(calc_info(x)), axis=1)
     return df.drop_duplicates(subset=['name', 'event', 'brand'])
 
 df = get_combined_data()
 
-# 1. 사이드바 필터
+# 사이드바 필터
 st.sidebar.header("🔍 필터 및 정렬")
 brand_list = sorted(df['brand'].unique().tolist())
 selected_brands = st.sidebar.multiselect("🏪 편의점 브랜드", brand_list, default=brand_list)
@@ -44,7 +44,6 @@ event_types = sorted([e for e in df['event'].unique().tolist() if e != '세일']
 selected_events = st.sidebar.multiselect("🏷️ 행사 종류", event_types, default=event_types)
 sort_option = st.sidebar.selectbox("💰 가격 정렬", ["기본 (랜덤)", "상품 가격 낮은 순", "상품 가격 높은 순"])
 
-# 필터링 및 정렬
 filtered_df = df[(df['brand'].isin(selected_brands)) & (df['event'].isin(selected_events)) & (
     df['name'].str.contains(search_query, case=False))]
 
@@ -53,7 +52,7 @@ if sort_option == "상품 가격 낮은 순":
 elif sort_option == "상품 가격 높은 순":
     filtered_df = filtered_df.sort_values(by='unit_price', ascending=False)
 
-# 2. 페이지네이션
+# 페이지네이션
 items_per_page = 30
 total_pages = max((len(filtered_df) // items_per_page) + (1 if len(filtered_df) % items_per_page > 0 else 0), 1)
 
@@ -65,7 +64,7 @@ if 'last_query' not in st.session_state or st.session_state.last_query != query_
     st.session_state.current_page = 1
     st.session_state.last_query = query_hash
 
-# 3. 메인 화면
+# 메인 화면
 st.title(f"🏪 {datetime.now().strftime('%Y년 %m월')} 편의점 행사 정보")
 
 start_idx = (st.session_state.current_page - 1) * items_per_page
@@ -75,20 +74,23 @@ if not display_df.empty:
     cols = st.columns(5)
     for idx, (_, row) in enumerate(display_df.iterrows()):
         with cols[idx % 5]:
-            total_price_html = f'<div class="total-price">총액: {row["price"]:,}원</div>' if "+" in row['event'] else ""
             st.markdown(f"""
                 <div class="product-card">
                     <div class="img-container"><img src="{row['img_url']}"></div>
                     <div class="product-name">{row['name']}</div>
-                    <div class="unit-price">개당 {row['unit_price']:,}원</div>
-                    {total_price_html}
-                    <div style="font-size: 0.8rem; color: #666; margin-top:5px;">
-                        📍 {row['brand']} | <span style="background-color:#eee; padding:2px 5px; border-radius:4px;">{row['event']}</span>
+                    <div style="margin-top: 8px;">
+                        <span style="font-size: 1.2rem; font-weight: 800; color: #ffffff;">{row['price']:,}원</span>
+                        <span style="font-size: 0.85rem; color: #ff6b6b; font-weight: bold; margin-left: 5px;">({row['discount_rate']}↓)</span>
+                    </div>
+                    <div class="unit-price-text">
+                        개당 <b>{row['unit_price']:,}원</b>
+                    </div>
+                    <div class="brand-text">
+                        📍 {row['brand']} | <span class="event-tag">{row['event']}</span>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
 
-    # 하단 네비게이션
     st.markdown("---")
     _, b1, p_box, b2, _ = st.columns([4, 0.3, 1, 0.3, 4])
 

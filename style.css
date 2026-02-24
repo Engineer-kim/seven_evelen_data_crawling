@@ -12,10 +12,40 @@
 }
 .img-container img { width: 100%; height: 100%; object-fit: contain; }
 .product-card { margin-bottom: 20px; }
-.product-name { height: 45px; overflow: hidden; font-size: 0.9rem; font-weight: bold; margin-top: 10px; line-height: 1.2; }
-.unit-price { color: #ff4b4b; font-weight: bold; font-size: 1.1rem; }
-.total-price { color: #888; font-size: 0.8rem; text-decoration: line-through; }
 
+/* 상품명: 흰색 */
+.product-name {
+    height: 45px;
+    overflow: hidden;
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin-top: 10px;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+/* 개당 가격 및 브랜드 정보: 밝은 회색 */
+.unit-price-text {
+    font-size: 0.9rem;
+    color: #cccccc;
+    margin-top: 2px;
+}
+.brand-text {
+    font-size: 0.8rem;
+    color: #bbbbbb;
+    margin-top: 5px;
+}
+
+/* 행사 태그: 시인성을 위해 배경색 유지 */
+.event-tag {
+    background-color: #f0f0f0;
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: #333333;
+    font-weight: bold;
+}
+
+/* 버튼 및 페이지네이션 스타일 */
 div.stButton > button {
     border: none !important;
     background-color: transparent !important;
@@ -28,13 +58,11 @@ div.stButton > button {
     outline: none !important;
 }
 
-
 div[data-testid="column"]:nth-child(2) div.stButton > button {
     text-align: right !important;
     justify-content: flex-end !important;
     display: flex !important;
 }
-
 
 div[data-testid="column"]:nth-child(4) div.stButton > button {
     text-align: left !important;
