@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
+import plotly.express as px
 
 st.set_page_config(page_title="이달의 편의점 행사", layout="wide")
 
@@ -134,22 +135,73 @@ elif menu == "브랜드별 비교":
     brand_counts = filtered_df['brand'].value_counts().reset_index()
     brand_counts.columns = ['브랜드', '상품 개수']
 
-    # 2. 브랜드별 행사 유형별 집계
-    event_brand_counts = filtered_df.groupby(['brand', 'event']).size().unstack(fill_value=0)
+    brand_colors = {
+        "CU": "#9BC621",
+        "7Eleven": "#008135",
+        "emart24": "#FFB71B",
+        "GS25": "#0095D3"
+    }
 
     col1, col2 = st.columns(2)
     with col1:
         st.write("✨ 브랜드별 총 행사 상품 수")
-        st.bar_chart(brand_counts.set_index('브랜드'))  # Streamlit 기본 차트
+        # Plotly bar 차트 사용 + 색상 맵 적용
+        fig1 = px.bar(
+            brand_counts,
+            x='브랜드',
+            y='상품 개수',
+            text='상품 개수',
+            color='브랜드',
+            color_discrete_map=brand_colors  # 색상 설정 추가
+        )
+        fig1.update_layout(
+            xaxis_tickangle=0,  # 텍스트 가로 고정
+            showlegend=False,
+            height=400,
+            margin=dict(l=20, r=20, t=20, b=20)
+        )
+        st.plotly_chart(fig1, width='stretch')
 
     with col2:
         st.write("📝 상세 통계 표")
+        event_brand_counts = filtered_df.groupby(['brand', 'event']).size().unstack(fill_value=0)
         st.dataframe(event_brand_counts, width='stretch')
 
     # 3. 평균 가격 비교
     st.write("💰 브랜드별 평균 개당 가격 (unit_price)")
     avg_price = filtered_df.groupby('brand')['unit_price'].mean().reset_index()
-    st.line_chart(avg_price.set_index('brand'))
+    avg_price.columns = ['브랜드', '평균가격']
+
+    # 라인 차트를 생성
+    fig2 = px.line(
+        avg_price,
+        x='브랜드',
+        y='평균가격',
+        markers=True
+    )
+
+    # 선의 스타일 설정
+    fig2.update_traces(
+        line=dict(color="#FF6B6B", width=3),
+        marker=dict(size=10)
+    )
+
+    # 각 점(markers)에만 브랜드별 색상 적용
+    for brand, color in brand_colors.items():
+        fig2.update_traces(
+            marker=dict(color=color),
+            selector=dict(name=brand)
+        )
+
+    fig2.update_layout(
+        xaxis_tickangle=0,
+        showlegend=False,
+        height=400,
+        margin=dict(l=20, r=20, t=20, b=20),
+        hovermode="x unified"
+    )
+
+    st.plotly_chart(fig2, width='stretch')
 
 elif menu == "가성비 비교":
     st.subheader("💎 최고의 가성비 아이템 (할인율 TOP 50)")
@@ -161,7 +213,6 @@ elif menu == "가성비 비교":
     ).head(50)
 
     if not best_value_df.empty:
-        # 가성비 페이지는 리스트 형태로 간결하게 출력
         for _, row in best_value_df.iterrows():
             with st.container():
                 c1, c2, c3 = st.columns([1, 4, 2])
