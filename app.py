@@ -39,11 +39,11 @@ def get_combined_data():
 
 df = get_combined_data()
 
-# 1. 사이드바: 메뉴 이동용 공간 (Multi-page 메뉴)
+# 1. 사이드바 (비교)
 st.sidebar.title("📌 메뉴")
 menu = st.sidebar.radio(
-    "이동할 페이지를 선택하세요",
-    ["전체 요약", "브랜드별 비교", "가성비 분석"]
+    "비교 데이터 방법 선택",
+    ["전체 요약", "브랜드별 비교", "가성비 비교"]
 )
 
 # 2. 메인 화면 상단: 필터 및 검색 (메인 상단으로 이동)
@@ -144,14 +144,14 @@ elif menu == "브랜드별 비교":
 
     with col2:
         st.write("📝 상세 통계 표")
-        st.dataframe(event_brand_counts, use_container_width=True)
+        st.dataframe(event_brand_counts, width='stretch')
 
     # 3. 평균 가격 비교
     st.write("💰 브랜드별 평균 개당 가격 (unit_price)")
     avg_price = filtered_df.groupby('brand')['unit_price'].mean().reset_index()
     st.line_chart(avg_price.set_index('brand'))
 
-elif menu == "가성비 분석":
+elif menu == "가성비 비교":
     st.subheader("💎 최고의 가성비 아이템 (할인율 TOP 50)")
 
     # 할인율이 높은 순(50% > 33% > 25%)으로 정렬하고, 같은 할인율이면 가격이 낮은 순
