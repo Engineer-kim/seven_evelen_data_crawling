@@ -31,4 +31,6 @@ streamlit run app.py
 -  기존 Csv 파일이 존재할 경우,삭제후 시행.
 -  app.py 실행전 requirements.txt 파일내의 의존성 설치해야함
 
+*- 배포 도메인* 
+- https://sevenevelendatacrawling-u2c2p3snucvvuwvmuetooy.streamlit.app/
  
