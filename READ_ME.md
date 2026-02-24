@@ -23,6 +23,12 @@ pip install pandas requests beautifulsoup4
 ```bash
 python seven_eleven_crawler.py
 ```
+```bash
+streamlit run app.py
+```
+
 *- 참고 사항*
 -  기존 Csv 파일이 존재할 경우,삭제후 시행.
--  
+-  app.py 실행전 requirements.txt 파일내의 의존성 설치해야함
+
+ 
